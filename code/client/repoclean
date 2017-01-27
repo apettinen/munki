@@ -26,7 +26,8 @@ A tool to remove older, unused software items from a Munki repo.
 import subprocess
 import sys
 import os
-import optparse
+#import optparse
+import argparse
 
 from distutils.version import LooseVersion
 
@@ -132,7 +133,7 @@ def make_catalogs(repopath):
     if not os.path.exists(makecatalogs_path):
         # didn't find it; assume the default install path
         makecatalogs_path = '/usr/local/munki/makecatalogs'
-    
+
     print 'Rebuilding catalogs at %s...' % repopath
     proc = subprocess.Popen([makecatalogs_path, repopath],
                             bufsize=-1, stdout=subprocess.PIPE,
@@ -179,7 +180,6 @@ def get_file_sizes(repopath, items_to_delete, pkgs_to_keep):
             except (OSError, IOError):
                 pass
     return (humanReadable(pkginfo_total_size), humanReadable(pkg_total_size))
-
 
 def delete_items(repopath, items_to_delete, pkgs_to_keep):
     '''Deletes items from the repo'''
@@ -252,6 +252,13 @@ def clean_repo(repopath, options):
     errors = []
     manifest_items = set()
     manifest_items_with_versions = set()
+
+    # # convert the options.exclude to list of tuples with nameAndVersion():
+    excluded_items=[]
+    if options.exclude:
+        for excluded_item in options.exclude:
+            keep_name, keep_version = nameAndVersion(excluded_item)
+            excluded_items.append((keep_name, keep_version))
 
     print_utf8('Analyzing manifest files...')
     # look through all manifests for "Foo-1.0" style items
@@ -391,6 +398,9 @@ def clean_repo(repopath, options):
                 for item in item_list:
                     if item['pkg_path']:
                         pkgs_to_keep.add(item['pkg_path'])
+            # check if the item should still be kept:
+            elif (item_list[0]['name'], version) in excluded_items:
+                print 'foo'
             else:
                 for item in item_list:
                     items_to_delete.append(item)
@@ -455,20 +465,23 @@ PREFSPATH = os.path.expanduser(os.path.join('~/Library/Preferences',
                                             PREFSNAME))
 def main():
     '''Main'''
-    usage = "usage: %prog [options] [/path/to/repo_root]"
-    parser = optparse.OptionParser(usage=usage)
-    parser.add_option('--version', '-V', action='store_true',
-                      help='Print the version of the munki tools and exit.')
-    parser.add_option('--keep', '-k', default=2,
-                      help='Keep this many versions of a specific variation. '
-                           'Defaults to 2.')
-    parser.add_option('--show-all', action='store_true',
-                      help='Show all items even if none will be deleted.')
-    parser.add_option('--delete-items-in-no-manifests', action='store_true',
-                      help='Also delete items that are not referenced in any '
-                           'manifests. Not yet implemented.')
-    
-    options, arguments = parser.parse_args()
+    #usage = "usage: %prog [options] [/path/to/repo_root]"
+    parser = argparse.ArgumentParser()
+    parser.add_argument('path_to_repo_root', metavar="/path/to/repo_root", nargs='?', default=None)
+    parser.add_argument('--version', '-V', action='store_true',
+                    help='Print the version of the munki tools and exit.')
+    parser.add_argument('--keep', '-k', default=2, type=int,
+                    help='Keep this many versions of a specific variation. '
+                    'Defaults to 2.')
+    parser.add_argument('--exclude', '-e', nargs='*',
+                    help="Exclude these versions of a specific item, e.g. munkitools_admin-2.8.2.2885 munkitools_core-2.8.2.2885",
+                    dest='exclude')
+    parser.add_argument('--show-all', action='store_true',
+                    help='Show all items even if none will be deleted.')
+    parser.add_argument('--delete-items-in-no-manifests', action='store_true',
+                    help='Also delete items that are not referenced in any manifests. Not yet implemented.')
+
+    options = parser.parse_args()
 
     if options.version:
         print get_version()
@@ -485,7 +498,7 @@ def main():
 
     # Make sure we have a path to work with
     repopath = None
-    if len(arguments) == 0:
+    if not options.path_to_repo_root:
         repopath = pref('repo_path')
         if not repopath:
             print_err_utf8("Need to specify a path to the repo root!")
@@ -493,7 +506,7 @@ def main():
         else:
             print_utf8("Using repo path: %s" % repopath)
     else:
-        repopath = arguments[0].rstrip("/")
+        repopath = options.path_to_repo_root.rstrip("/")
 
     # Make sure the repo path exists
     if not os.path.exists(repopath):
@@ -505,4 +518,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
