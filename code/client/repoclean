@@ -398,16 +398,10 @@ def clean_repo(repopath, options):
             # items not in manifests
             if item_name not in manifest_items and options.delete_if_not_in_manifests:
                 # check if item is apple_update_metadata:
-                # we need to specifically skip these as they are not in
-                # manifests
                 for item in item_list:
                     if item['installer_type'] != "apple_update_metadata":
                         items_to_delete.append(item)
                 line_info="[to be DELETED]"
-                    # else:
-                    #     # Write info about Apple Update metadata for printing
-                    #     # purposes
-                    #     line_info="(Apple Update Metadata)"
             # check if the item is to be excluded:
             elif (item_list[0]['name'], version) in excluded_items:
                 for item in item_list:
@@ -436,11 +430,7 @@ def clean_repo(repopath, options):
                 line_info = (
                     "(multiple items share this version number) " + line_info)
             else:
-                #try:
                 line_info = "(%s) %s" % (item['relative_path'], line_info)
-                # except:
-                #     print 'ei vittu'
-                #     print item_list
 
             if print_this:
                 print "    ", version, line_info
@@ -458,6 +448,11 @@ def clean_repo(repopath, options):
         repopath, items_to_delete, pkgs_to_keep)
     print_utf8("pkginfo space savings:   %s" % pkginfo_size)
     print_utf8("pkg space savings:       %s" % pkg_size)
+    if options.dryrun:
+        print 'These packages would be deleted:'
+        for item in items_to_delete:
+            print item['name'], item['version'], item['relative_path'], item['pkg_path']
+        sys.exit(0)
 
     if errors:
         print_err_utf8("\nErrors encountered when processing repo:\n")
@@ -510,7 +505,8 @@ def main():
     parser.add_argument('--show-all', action='store_true',
                     help='Show all items even if none will be deleted.')
     parser.add_argument('--delete-items-in-no-manifests', action='store_true',
-                    help='Also delete items that are not referenced in any manifests. Not yet implemented.', dest='delete_if_not_in_manifests')
+                    help='Also delete items that are not referenced in any manifests.', dest='delete_if_not_in_manifests')
+    parser.add_argument('--dry-run', action='store_true', help='Do a dry run, i.e, print what would be deleted and exit', dest='dryrun')
 
     options = parser.parse_args()
 
