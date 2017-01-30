@@ -259,7 +259,8 @@ def clean_repo(repopath, options):
         for excluded_item in options.exclude:
             keep_name, keep_version = nameAndVersion(excluded_item)
             excluded_items.append((keep_name, keep_version))
-
+    print(excluded_items)
+    raw_input('paina avaruustankoa')
     print_utf8('Analyzing manifest files...')
     # look through all manifests for "Foo-1.0" style items
     # we need to note these so the specific referenced version is not deleted
@@ -384,7 +385,13 @@ def clean_repo(repopath, options):
             line_info = ''
             index += 1
             item_list = pkginfodb[key][version]
-            if (item_list[0]['name'], version) in manifest_items_with_versions:
+            # first check if the item is to be excluded:
+            if (item_list[0]['name'], version) in excluded_items:
+                for item in item_list:
+                    if item['pkg_path']:
+                        pkgs_to_keep.add(item['pkg_path'])
+                line_info = "(set to be EXCLUDED)"
+            elif (item_list[0]['name'], version) in manifest_items_with_versions:
                 for item in item_list:
                     if item['pkg_path']:
                         pkgs_to_keep.add(item['pkg_path'])
@@ -398,9 +405,6 @@ def clean_repo(repopath, options):
                 for item in item_list:
                     if item['pkg_path']:
                         pkgs_to_keep.add(item['pkg_path'])
-            # check if the item should still be kept:
-            elif (item_list[0]['name'], version) in excluded_items:
-                print 'foo'
             else:
                 for item in item_list:
                     items_to_delete.append(item)
