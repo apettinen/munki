@@ -260,7 +260,6 @@ def clean_repo(repopath, options):
             keep_name, keep_version = nameAndVersion(excluded_item)
             excluded_items.append((keep_name, keep_version))
     print(excluded_items)
-    raw_input('paina sisaan')
     print_utf8('Analyzing manifest files...')
     # look through all manifests for "Foo-1.0" style items
     # we need to note these so the specific referenced version is not deleted
@@ -309,11 +308,12 @@ def clean_repo(repopath, options):
         version = pkginfo['version']
         relpath = filepath[len(pkgsinfopath):].lstrip(os.path.sep)
         pkgpath = pkginfo.get('installer_item_location', '')
+        # get installer type so that we can specify apple update metadata
+        # if not present, set to None
         try:
             installer_type = pkginfo['installer_type']
         except KeyError:
             installer_type = None
-
         # track required items; if these are in "Foo-1.0" format, we need to
         # note these so we don't delete the specific referenced version
         if 'requires' in pkginfo:
@@ -366,6 +366,7 @@ def clean_repo(repopath, options):
             pkginfodb[metakey] = {}
         if version not in pkginfodb[metakey]:
             pkginfodb[metakey][version] = []
+
         pkginfodb[metakey][version].append({
             'name': name,
             'version': version,
@@ -374,7 +375,6 @@ def clean_repo(repopath, options):
             'installer_type': installer_type
         })
         pkginfo_count += 1
-
     items_to_delete = []
     pkgs_to_keep = set()
     for key in sorted(pkginfodb.keys()):
@@ -382,7 +382,6 @@ def clean_repo(repopath, options):
                       len(pkginfodb[key].keys()) > options.keep)
         item_name = pkginfodb[key][pkginfodb[key].keys()[0]][0]['name']
         if print_this:
-            print key
             if item_name not in manifest_items:
                 if options.delete_if_not_in_manifests:
                     items_to_delete.append(item)
@@ -395,16 +394,21 @@ def clean_repo(repopath, options):
             line_info = ''
             index += 1
             item_list = pkginfodb[key][version]
+            # if specified by options.delete_if_not_in_manifests, process
+            # items not in manifests
             if item_name not in manifest_items and options.delete_if_not_in_manifests:
                 # check if item is apple_update_metadata:
                 # we need to specifically skip these as they are not in
                 # manifests
-                if pkginfodb[key][pkginfodb[key].keys()[0]][0]['installer_type'] != "apple_update_metadata":
-                    for item in item_list:
+                for item in item_list:
+                    if item['installer_type'] != "apple_update_metadata":
                         items_to_delete.append(item)
-                    line_info="[to be DELETED]"
-
-            # first check if the item is to be excluded:
+                line_info="[to be DELETED]"
+                    # else:
+                    #     # Write info about Apple Update metadata for printing
+                    #     # purposes
+                    #     line_info="(Apple Update Metadata)"
+            # check if the item is to be excluded:
             elif (item_list[0]['name'], version) in excluded_items:
                 for item in item_list:
                     if item['pkg_path']:
@@ -432,7 +436,12 @@ def clean_repo(repopath, options):
                 line_info = (
                     "(multiple items share this version number) " + line_info)
             else:
+                #try:
                 line_info = "(%s) %s" % (item['relative_path'], line_info)
+                # except:
+                #     print 'ei vittu'
+                #     print item_list
+
             if print_this:
                 print "    ", version, line_info
                 if len(item_list) > 1:
