@@ -260,7 +260,7 @@ def clean_repo(repopath, options):
             keep_name, keep_version = nameAndVersion(excluded_item)
             excluded_items.append((keep_name, keep_version))
     print(excluded_items)
-    raw_input('paina avaruustankoa')
+    raw_input('paina sisaan')
     print_utf8('Analyzing manifest files...')
     # look through all manifests for "Foo-1.0" style items
     # we need to note these so the specific referenced version is not deleted
@@ -304,10 +304,15 @@ def clean_repo(repopath, options):
         except BaseException, inst:
             errors.append("Unexpected error for %s: %s" % (filepath, inst))
             continue
+
         name = pkginfo['name']
         version = pkginfo['version']
         relpath = filepath[len(pkgsinfopath):].lstrip(os.path.sep)
         pkgpath = pkginfo.get('installer_item_location', '')
+        try:
+            installer_type = pkginfo['installer_type']
+        except KeyError:
+            installer_type = None
 
         # track required items; if these are in "Foo-1.0" format, we need to
         # note these so we don't delete the specific referenced version
@@ -366,6 +371,7 @@ def clean_repo(repopath, options):
             'version': version,
             'relative_path': relpath,
             'pkg_path': pkgpath,
+            'installer_type': installer_type
         })
         pkginfo_count += 1
 
@@ -378,19 +384,32 @@ def clean_repo(repopath, options):
         if print_this:
             print key
             if item_name not in manifest_items:
-                print "[not in any manifests]"
+                if options.delete_if_not_in_manifests:
+                    items_to_delete.append(item)
+                    print "[not in any manifests, to be DELETED]"
+                else:
+                    print "[not in any manifests]"
             print "versions:"
         index = 0
         for version in sorted(pkginfodb[key].keys(), compare_versions):
             line_info = ''
             index += 1
             item_list = pkginfodb[key][version]
+            if item_name not in manifest_items and options.delete_if_not_in_manifests:
+                # check if item is apple_update_metadata:
+                # we need to specifically skip these as they are not in
+                # manifests
+                if pkginfodb[key][pkginfodb[key].keys()[0]][0]['installer_type'] != "apple_update_metadata":
+                    for item in item_list:
+                        items_to_delete.append(item)
+                    line_info="[to be DELETED]"
+
             # first check if the item is to be excluded:
-            if (item_list[0]['name'], version) in excluded_items:
+            elif (item_list[0]['name'], version) in excluded_items:
                 for item in item_list:
                     if item['pkg_path']:
                         pkgs_to_keep.add(item['pkg_path'])
-                line_info = "(set to be EXCLUDED)"
+                line_info = "(to be EXCLUDED)"
             elif (item_list[0]['name'], version) in manifest_items_with_versions:
                 for item in item_list:
                     if item['pkg_path']:
@@ -421,7 +440,6 @@ def clean_repo(repopath, options):
                         print "    ", " " * len(version), "(%s)" % item['relative_path']
         if print_this:
             print
-
     print_utf8("Total pkginfo items:     %s" % pkginfo_count)
     print_utf8("Item variants:           %s" % len(pkginfodb.keys()))
     print_utf8("pkginfo items to delete: %s" % len(items_to_delete))
@@ -483,7 +501,7 @@ def main():
     parser.add_argument('--show-all', action='store_true',
                     help='Show all items even if none will be deleted.')
     parser.add_argument('--delete-items-in-no-manifests', action='store_true',
-                    help='Also delete items that are not referenced in any manifests. Not yet implemented.')
+                    help='Also delete items that are not referenced in any manifests. Not yet implemented.', dest='delete_if_not_in_manifests')
 
     options = parser.parse_args()
 
