@@ -484,6 +484,25 @@ def pref(prefname):
     else:
         return None
 
+def exclude_callback(opt, opt_str, value, parser):
+    """
+    Callback function to handle variable arguments with optparse,
+    returns a list of arguments.
+    """
+    assert value is None
+    value = []
+
+    for arg in parser.rargs:
+        # stop on --foo like options
+        if arg[:2] == "--" and len(arg) > 2:
+            break
+        # stop on -f like options
+        if arg[:1] == "-" and len(arg) > 1:
+            break
+        value.append(arg)
+    del parser.rargs[:len(value)]
+    setattr(parser.values, opt.dest, value)
+
 
 PREFSNAME = 'com.googlecode.munki.munkiimport.plist'
 PREFSPATH = os.path.expanduser(os.path.join('~/Library/Preferences',
@@ -497,12 +516,20 @@ def main():
     parser.add_option('--keep', '-k', default=2,
                       help='Keep this many versions of a specific variation. '
                            'Defaults to 2.')
-    parser.add_option('--exclude', '-e', dest='exclude', )
+    parser.add_option('--exclude', '-e', action="callback",
+                    callback=exclude_callback, nargs > 1, type="string",
+                    help="Exclude these versions of a specific item, e.g. munkitools_admin-2.8.2.2885 munkitools_core-2.8.2.2885",
+                    dest='exclude')
+    parser.add_option('--exclude-plist', '-p', dest='exclude_plist',
+                    help="Exclude versions specified in this plist as an array of strings with <key>exclude</key>",
+                    metavar='/path/to/exclude.plist')
     parser.add_option('--show-all', action='store_true',
                       help='Show all items even if none will be deleted.')
     parser.add_option('--delete-items-in-no-manifests', action='store_true',
                       dest='delete_if_not_in_manifests', help='Also delete items that are not referenced in any '
                            'manifests. Preserves any Apple update metadata.')
+    parser.add_option('--dry-run', action='store_true', help='Do a dry run, i.e, only print the package versions that would be deleted and exit', dest='dryrun')
+    parser.add_option('--file', '--output', '-o', '-f', help='write output to a file' )
 
     options, arguments = parser.parse_args()
 
@@ -527,8 +554,6 @@ def main():
                     help='Also delete items that are not referenced in any manifests.', dest='delete_if_not_in_manifests')
     parser.add_argument('--dry-run', action='store_true', help='Do a dry run, i.e, print what would be deleted and exit', dest='dryrun')
 
-    options = parser.parse_args()
-
     if options.version:
         print get_version()
         exit(0)
@@ -544,7 +569,7 @@ def main():
 
     # Make sure we have a path to work with
     repopath = None
-    if not options.path_to_repo_root:
+    if len(arguments) == 0:
         repopath = pref('repo_path')
         if not repopath:
             print_err_utf8("Need to specify a path to the repo root!")
@@ -552,7 +577,7 @@ def main():
         else:
             print_utf8("Using repo path: %s" % repopath)
     else:
-        repopath = options.path_to_repo_root.rstrip("/")
+        repopath = arguments[0].rstrip("/")
 
     # Make sure the repo path exists
     if not os.path.exists(repopath):
