@@ -26,8 +26,7 @@ A tool to remove older, unused software items from a Munki repo.
 import subprocess
 import sys
 import os
-#import optparse
-import argparse
+import optparse
 
 from distutils.version import LooseVersion
 
