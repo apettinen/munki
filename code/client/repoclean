@@ -490,7 +490,27 @@ PREFSPATH = os.path.expanduser(os.path.join('~/Library/Preferences',
                                             PREFSNAME))
 def main():
     '''Main'''
-    #usage = "usage: %prog [options] [/path/to/repo_root]"
+    usage = "usage: %prog [options] [/path/to/repo_root]"
+    parser = optparse.OptionParser(usage=usage)
+    parser.add_option('--version', '-V', action='store_true',
+                      help='Print the version of the munki tools and exit.')
+    parser.add_option('--keep', '-k', default=2,
+                      help='Keep this many versions of a specific variation. '
+                           'Defaults to 2.')
+    parser.add_option('--exclude', '-e', dest='exclude', )
+    parser.add_option('--show-all', action='store_true',
+                      help='Show all items even if none will be deleted.')
+    parser.add_option('--delete-items-in-no-manifests', action='store_true',
+                      dest='delete_if_not_in_manifests', help='Also delete items that are not referenced in any '
+                           'manifests. Preserves any Apple update metadata.')
+
+    options, arguments = parser.parse_args()
+
+
+
+
+
+
     parser = argparse.ArgumentParser()
     parser.add_argument('path_to_repo_root', metavar="/path/to/repo_root", nargs='?', default=None)
     parser.add_argument('--version', '-V', action='store_true',
