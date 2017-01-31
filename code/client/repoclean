@@ -485,13 +485,6 @@ def pref(prefname):
     else:
         return None
 
-def variable_arguments_callback(opt, opt_str, value, parser):
-    assert value is None
-    value = []
-
-
-
-
 PREFSNAME = 'com.googlecode.munki.munkiimport.plist'
 PREFSPATH = os.path.expanduser(os.path.join('~/Library/Preferences',
                                             PREFSNAME))
