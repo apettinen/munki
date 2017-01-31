@@ -485,6 +485,12 @@ def pref(prefname):
     else:
         return None
 
+def variable_arguments_callback(opt, opt_str, value, parser):
+    assert value is None
+    value = []
+
+
+
 
 PREFSNAME = 'com.googlecode.munki.munkiimport.plist'
 PREFSPATH = os.path.expanduser(os.path.join('~/Library/Preferences',
@@ -499,7 +505,7 @@ def main():
     parser.add_argument('--keep', '-k', default=2, type=int,
                     help='Keep this many versions of a specific variation. '
                     'Defaults to 2.')
-    parser.add_argument('--exclude', '-e', nargs='*',
+    parser.add_argument('--exclude', '-e', nargs='+',
                     help="Exclude these versions of a specific item, e.g. munkitools_admin-2.8.2.2885 munkitools_core-2.8.2.2885",
                     dest='exclude')
     parser.add_argument('--show-all', action='store_true',
