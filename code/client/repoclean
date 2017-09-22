@@ -515,10 +515,15 @@ def main():
                       help='Print the version of the munki tools and exit.')
     parser.add_option('--keep', '-k', default=2,
                       help='Keep this many versions of a specific variation. '
-                           'Defaults to 2.')
-    parser.add_option('--exclude', '-e', action="callback",
-                    callback=exclude_callback, nargs > 1, type="string",
-                    help="Exclude these versions of a specific item, e.g. munkitools_admin-2.8.2.2885 munkitools_core-2.8.2.2885",
+                      'Defaults to 2.')
+    # parser.add_option('--exclude', '-e', action="callback",
+    #                 callback=exclude_callback, nargs > 1, type="string",
+    #                 help="Exclude these versions of a specific item, e.g. munkitools_admin-2.8.2.2885 munkitools_core-2.8.2.2885",
+    #                 dest='exclude')
+    parser.add_option('--exclude', '-e', action="append", nargs > 1,
+                    type="string", help="Exclude these versions of a specific"
+                    "item, e.g. munkitools_admin-2.8.2.2885. Can be set"
+                    "multiple times.",
                     dest='exclude')
     parser.add_option('--exclude-plist', '-p', dest='exclude_plist',
                     help="Exclude versions specified in this plist as an array of strings with <key>exclude</key>",
@@ -533,27 +538,6 @@ def main():
 
     options, arguments = parser.parse_args()
 
-
-
-
-
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('path_to_repo_root', metavar="/path/to/repo_root", nargs='?', default=None)
-    parser.add_argument('--version', '-V', action='store_true',
-                    help='Print the version of the munki tools and exit.')
-    parser.add_argument('--keep', '-k', default=2, type=int,
-                    help='Keep this many versions of a specific variation. '
-                    'Defaults to 2.')
-    parser.add_argument('--exclude', '-e', nargs='*',
-                    help="Exclude these versions of a specific item, e.g. munkitools_admin-2.8.2.2885 munkitools_core-2.8.2.2885",
-                    dest='exclude')
-    parser.add_argument('--show-all', action='store_true',
-                    help='Show all items even if none will be deleted.')
-    parser.add_argument('--delete-items-in-no-manifests', action='store_true',
-                    help='Also delete items that are not referenced in any manifests.', dest='delete_if_not_in_manifests')
-    parser.add_argument('--dry-run', action='store_true', help='Do a dry run, i.e, print what would be deleted and exit', dest='dryrun')
-
     if options.version:
         print get_version()
         exit(0)
@@ -566,6 +550,12 @@ def main():
     if options.keep < 1:
         print_err_utf8('--keep value must be a positive integer!')
         exit(-1)
+
+    # check and merge plist and command line excludes (we allow both)
+    if options.exclude:
+        # options.exclude contains a list of
+
+
 
     # Make sure we have a path to work with
     repopath = None
